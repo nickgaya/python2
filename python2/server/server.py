@@ -173,7 +173,7 @@ class Python2Server(object):
     _do_getitem = _commandfunc(operator.getitem, ('object', 'key'))
     _do_setitem = _commandfunc(operator.setitem, ('object', 'key', 'value'),
                                edepth=EncodingDepth.DEEP)
-    _do_setitem = _commandfunc(operator.delitem, ('object', 'key'),
+    _do_delitem = _commandfunc(operator.delitem, ('object', 'key'),
                                edepth=EncodingDepth.DEEP)
     _do_iter = _commandfunc(iter, ('object',))
     _do_reversed = _commandfunc(reversed, ('object',))

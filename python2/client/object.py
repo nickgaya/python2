@@ -92,6 +92,9 @@ class Py2Object:
         return self.__client__.do_command(
             'setitem', object=self, key=key, value=value)
 
+    def __delitem__(self, key):
+        return self.__client__.do_command('delitem', object=self)
+
     def __iter__(self):
         return self.__client__.do_command('iter', object=self)
 

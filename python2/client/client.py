@@ -56,8 +56,10 @@ class Py2Client:
             exception_type = Py2Error
             if result.get('exc_type') == 'StopIteration':
                 exception_type = Py2StopIteration
-            raise exception_type(self.encoder.decode(result['message']),
-                                 self.encoder.decode(result['exception']))
+            raise exception_type(
+                self.encoder.decode(result['message']),
+                exception=self.encoder.decode(result['exception'])
+            )
 
     def close(self):
         with contextlib.ExitStack() as stack:

@@ -8,11 +8,13 @@ if PYTHON_VERSION == 2:
     _bytes = str
     _unicode = unicode  # noqa
     _range = xrange  # noqa
+    _items = lambda dct: dct.iteritems()
 elif PYTHON_VERSION == 3:
     _int_types = (int,)
     _bytes = bytes
     _unicode = str
     _range = range
+    _items = lambda dct: dct.items()
 else:
     raise Exception("Unsupported Python version: {}".format(PYTHON_VERSION))
 
@@ -65,7 +67,7 @@ class BaseEncoder(object):
             elif t is dict:
                 return dict(type='dict',
                             items=[self._enc_kv(key, value, depth-1)
-                                   for key, value in obj.iteritems()])
+                                   for key, value in _items(obj)])
             elif t is slice:
                 return dict(type='slice',
                             start=self.encode(obj.start, depth-1),
