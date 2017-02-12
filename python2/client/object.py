@@ -1,4 +1,8 @@
+import logging
 import weakref
+
+
+logger = logging.getLogger(__name__)
 
 
 class Py2Object:
@@ -13,237 +17,235 @@ class Py2Object:
     @property
     def _(self):
         """ Convert this object to its Python 3 equivalent. """
-        return self.__client__.do_command('lift', object=self)
+        return self.__client__.do_command('lift', self)
 
     @property
     def __(self):
         """ Recursively convert this object to its Python 3 equivalent. """
-        return self.__client__.do_command('deeplift', object=self)
+        return self.__client__.do_command('deeplift', self)
 
     def __repr__(self):
-        obj_repr = self.__client__.do_command('repr', object=self)
+        obj_repr = self.__client__.do_command('repr', self)
         return '<{} {}>'.format(self.__class__.__name__,
                                 obj_repr.decode(errors='replace'))
 
     def __str__(self):
-        return self.__client__.do_command('unicode', object=self)
+        return self.__client__.do_command('unicode', self)
 
     def __bytes__(self):
-        return self.__client__.do_command('str', object=self)
+        return self.__client__.do_command('str', self)
 
     def __format__(self, format_spec):
-        return self.__client__.do_command(
-            'format', object=self, format_spec=format_spec)
+        return self.__client__.do_command('format', self, format_spec)
 
     def __lt__(self, other):
-        return self.__client__.do_command('lt', a=self, b=other)
+        return self.__client__.do_command('lt', self, other)
 
     def __le__(self, other):
-        return self.__client__.do_command('le', a=self, b=other)
+        return self.__client__.do_command('le', self, other)
 
     def __eq__(self, other):
-        return self.__client__.do_command('eq', a=self, b=other)
+        return self.__client__.do_command('eq', self, other)
 
     def __ne__(self, other):
-        return self.__client__.do_command('ne', a=self, b=other)
+        return self.__client__.do_command('ne', self, other)
 
     def __gt__(self, other):
-        return self.__client__.do_command('gt', a=self, b=other)
+        return self.__client__.do_command('gt', self, other)
 
     def __ge__(self, other):
-        return self.__client__.do_command('ge', a=self, b=other)
+        return self.__client__.do_command('ge', self, other)
 
     def __bool__(self):
-        return self.__client__.do_command('bool', object=self)
+        return self.__client__.do_command('bool', self)
 
-    # XXX?
     def __hash__(self):
-        return self.__client__.do_command('hash', object=self)
+        return self.__client__.do_command('hash', self)
 
     def __getattr__(self, name):
-        return self.__client__.do_command('getattr', object=self, name=name)
+        return self.__client__.do_command('getattr', self, name)
 
     def __setattr__(self, name, value):
-        return self.__client__.do_command(
-            'setattr', object=self, name=name, value=value)
+        return self.__client__.do_command('setattr', self, name, value)
 
     def __delattr__(self, name):
-        return self.__client__.do_command('delattr', object=self, name=name)
+        return self.__client__.do_command('delattr', self, name)
 
     def __call__(self, *args, **kwargs):
-        return self.__client__.do_command(
-            'call', object=self, args=args, kwargs=kwargs)
-
-    def __instancecheck__(self, instance):
-        return isinstance(instance, Py2Object) and self.__client__.do_command(
-            'isinstance', object=instance, classinfo=self)
-
-    def __subclasscheck__(self, subclass):
-        return issubclass(subclass, Py2Object) and self.__client__.do_command(
-            'issubclass', class_=subclass, classinfo=self)
+        return self.__client__.do_command('call', self, args, kwargs)
 
     def __len__(self):
-        return self.__client__.do_command('len', object=self)
+        return self.__client__.do_command('len', self)
 
     def __getitem__(self, key):
-        return self.__client__.do_command('getitem', object=self, key=key)
+        return self.__client__.do_command('getitem', self, key)
 
     def __setitem__(self, key, value):
-        return self.__client__.do_command(
-            'setitem', object=self, key=key, value=value)
+        return self.__client__.do_command('setitem', self, key, value)
 
     def __delitem__(self, key):
-        return self.__client__.do_command('delitem', object=self)
+        return self.__client__.do_command('delitem', self, key)
 
     def __iter__(self):
-        return self.__client__.do_command('iter', object=self)
+        return Py2Iterator(self.__client__.do_command('iter', self))
 
     def __reversed__(self):
-        return self.__client__.do_command('reversed', object=self)
+        return self.__client__.do_command('reversed', self)
 
     def __contains__(self, item):
-        return self.__client__.do_command('contains', object=self, item=item)
+        return self.__client__.do_command('contains', self, item)
 
     def __next__(self):
-        return self.__client__.do_command('next', object=self)
+        return self.__client__.do_command('next', self)
 
     def __add__(self, other):
-        return self.__client__.do_command('add', a=self, b=other)
+        return self.__client__.do_command('add', self, other)
 
     def __sub__(self, other):
-        return self.__client__.do_command('sub', a=self, b=other)
+        return self.__client__.do_command('sub', self, other)
 
     def __mul__(self, other):
-        return self.__client__.do_command('mul', a=self, b=other)
+        return self.__client__.do_command('mul', self, other)
 
     def __truediv__(self, other):
-        return self.__client__.do_command('truediv', a=self, b=other)
+        return self.__client__.do_command('truediv', self, other)
 
     def __floordiv__(self, other):
-        return self.__client__.do_command('floordiv', a=self, b=other)
+        return self.__client__.do_command('floordiv', self, other)
 
     def __mod__(self, other):
-        return self.__client__.do_command('mod', a=self, b=other)
+        return self.__client__.do_command('mod', self, other)
 
     def __divmod__(self, other):
-        return self.__client__.do_command('divmod', a=self, b=other)
+        return self.__client__.do_command('divmod', self, other)
 
     def __pow__(self, other, modulo=None):
         if modulo is None:
-            return self.__client__.do_command('pow', a=self, b=other)
+            return self.__client__.do_command('pow', self, other)
         else:
-            return self.__client__.do_command(
-                'pow3', a=self, b=other, m=modulo)
+            return self.__client__.do_command('pow3', self, other, modulo)
 
     def __lshift__(self, other):
-        return self.__client__.do_command('lshift', a=self, b=other)
+        return self.__client__.do_command('lshift', self, other)
 
     def __rshift__(self, other):
-        return self.__client__.do_command('rshift', a=self, b=other)
+        return self.__client__.do_command('rshift', self, other)
 
     def __and__(self, other):
-        return self.__client__.do_command('and', a=self, b=other)
+        return self.__client__.do_command('and', self, other)
 
     def __xor__(self, other):
-        return self.__client__.do_command('xor', a=self, b=other)
+        return self.__client__.do_command('xor', self, other)
 
     def __or__(self, other):
-        return self.__client__.do_command('or', a=self, b=other)
+        return self.__client__.do_command('or', self, other)
 
     def __radd__(self, other):
-        return self.__client__.do_command('add', a=other, b=self)
+        return self.__client__.do_command('add', other, self)
 
     def __rsub__(self, other):
-        return self.__client__.do_command('sub', a=other, b=self)
+        return self.__client__.do_command('sub', other, self)
 
     def __rmul__(self, other):
-        return self.__client__.do_command('mul', a=other, b=self)
+        return self.__client__.do_command('mul', other, self)
 
     def __rtruediv__(self, other):
-        return self.__client__.do_command('truediv', a=other, b=self)
+        return self.__client__.do_command('truediv', other, self)
 
     def __rfloordiv__(self, other):
-        return self.__client__.do_command('floordiv', a=other, b=self)
+        return self.__client__.do_command('floordiv', other, self)
 
     def __rmod__(self, other):
-        return self.__client__.do_command('mod', a=other, b=self)
+        return self.__client__.do_command('mod', other, self)
 
     def __rdivmod__(self, other):
-        return self.__client__.do_command('divmod', a=other, b=self)
+        return self.__client__.do_command('divmod', other, self)
 
     def __rpow__(self, other):
-        return self.__client__.do_command('pow', a=other, b=self)
+        return self.__client__.do_command('pow', other, self)
 
     def __rlshift__(self, other):
-        return self.__client__.do_command('lshift', a=other, b=self)
+        return self.__client__.do_command('lshift', other, self)
 
     def __rrshift__(self, other):
-        return self.__client__.do_command('rshift', a=other, b=self)
+        return self.__client__.do_command('rshift', other, self)
 
     def __rand__(self, other):
-        return self.__client__.do_command('and', a=other, b=self)
+        return self.__client__.do_command('and', other, self)
 
     def __rxor__(self, other):
-        return self.__client__.do_command('xor', a=other, b=self)
+        return self.__client__.do_command('xor', other, self)
 
     def __ror__(self, other):
-        return self.__client__.do_command('or', a=other, b=self)
+        return self.__client__.do_command('or', other, self)
 
     def __iadd__(self, other):
-        return self.__client__.do_command('iadd', a=self, b=other)
+        return self.__client__.do_command('iadd', self, other)
 
     def __isub__(self, other):
-        return self.__client__.do_command('isub', a=self, b=other)
+        return self.__client__.do_command('isub', self, other)
 
     def __imul__(self, other):
-        return self.__client__.do_command('imul', a=self, b=other)
+        return self.__client__.do_command('imul', self, other)
 
     def __itruediv__(self, other):
-        return self.__client__.do_command('itruediv', a=self, b=other)
+        return self.__client__.do_command('itruediv', self, other)
 
     def __ifloordiv__(self, other):
-        return self.__client__.do_command('ifloordiv', a=self, b=other)
+        return self.__client__.do_command('ifloordiv', self, other)
 
     def __imod__(self, other):
-        return self.__client__.do_command('imod', a=self, b=other)
+        return self.__client__.do_command('imod', self, other)
 
     def __ipow__(self, other):
-        return self.__client__.do_command('ipow', a=self, b=other)
+        return self.__client__.do_command('ipow', self, other)
 
     def __ilshift__(self, other):
-        return self.__client__.do_command('ilshift', a=self, b=other)
+        return self.__client__.do_command('ilshift', self, other)
 
     def __irshift__(self, other):
-        return self.__client__.do_command('irshift', a=self, b=other)
+        return self.__client__.do_command('irshift', self, other)
 
     def __iand__(self, other):
-        return self.__client__.do_command('iand', a=self, b=other)
+        return self.__client__.do_command('iand', self, other)
 
     def __ixor__(self, other):
-        return self.__client__.do_command('ixor', a=self, b=other)
+        return self.__client__.do_command('ixor', self, other)
 
     def __ior__(self, other):
-        return self.__client__.do_command('or', a=self, b=other)
+        return self.__client__.do_command('ior', self, other)
 
     def __complex__(self):
-        return self.__client__.do_command('complex', object=self)
+        return self.__client__.do_command('complex', self)
 
     def __int__(self):
-        return self.__client__.do_command('int', object=self)
+        return self.__client__.do_command('int', self)
 
     def __float__(self):
-        return self.__client__.do_command('float', object=self)
+        return self.__client__.do_command('float', self)
 
     def __round__(self, n=0):
-        return self.__client__.do_command('round', object=self, n=n)
+        return self.__client__.do_command('round', self, n)
 
     def __index__(self):
-        return self.__client__.do_command('index', object=self)
+        return self.__client__.do_command('index', self)
 
     def __del__(self):
-        # TODO: Clean this up
-        print("Deleting object {}".format(self.__oid__))
         try:
-            self.__client__.do_command('del', object=self)
-        except Exception as e:
-            print("Delete failed: {}: {}".format(type(e).__name__, e))
+            logger.debug("Deleting object {}".format(self.__oid__))
+            self.__client__.do_command('del', self)
+        except Exception:
+            logger.debug("Delete failed", exc_info=True)
+            pass  # Session may have already ended
+
+
+class Py2Iterator:
+    """ Wrapper around a Py2Object that only exposes iterator methods. """
+    def __init__(self, obj):
+        self.object = obj
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self.object)

@@ -3,21 +3,24 @@
 import __builtin__
 from functools import wraps
 import json
+import logging
 import operator
 import sys
 import traceback
 
-from python2.encoding import EncodingDepth
-from python2.server.encoding import ServerEncoder
+from python2.server.codec import ServerCodec
+from python2.shared.codec import EncodingDepth
 
 
-def _command(keys, edepth=EncodingDepth.REF):
+logger = logging.getLogger(__name__)
+
+
+def _command(edepth=EncodingDepth.REF):
     def wrapper(func):
         @wraps(func)
-        def wrapped(self, data):
-            kwargs = {key: self.encoder.decode(data[key]) for key in keys}
+        def wrapped(self, *args):
             try:
-                result = func(self, **kwargs)
+                result = func(self, *args)
             except Exception:
                 return self._raise(*sys.exc_info())
             else:
@@ -28,9 +31,8 @@ def _command(keys, edepth=EncodingDepth.REF):
     return wrapper
 
 
-def _commandfunc(func, keys, edepth=EncodingDepth.REF, name=None):
-    def wrapped(self, data):
-        args = [self.encoder.decode(data[key]) for key in keys]
+def _commandfunc(func, edepth=EncodingDepth.REF, name=None):
+    def wrapped(self, *args):
         try:
             result = func(*args)
         except Exception:
@@ -45,9 +47,9 @@ def _commandfunc(func, keys, edepth=EncodingDepth.REF, name=None):
     return wrapped
 
 
-def _reflect(object):
+def _reflect(obj):
     """ Identity function. """
-    return object
+    return obj
 
 
 class Python2Server(object):
@@ -57,11 +59,13 @@ class Python2Server(object):
         self.infile = infile
         self.outfile = outfile
         self.objects = {}
-        self.encoder = ServerEncoder(self)
+        self.codec = ServerCodec(self)
 
     def cache_add(self, obj):
         """ Add an object to the server cache. """
-        self.objects[id(obj)] = obj
+        oid = id(obj)
+        logger.debug("Caching object {}".format(oid))
+        self.objects[oid] = obj
 
     def cache_get(self, oid):
         """ Get an object by id from the server cache. """
@@ -69,6 +73,7 @@ class Python2Server(object):
 
     def cache_del(self, oid):
         """ Delete an object by id from the server cache. """
+        logger.debug("Removing object {} from cache".format(oid))
         del self.objects[oid]
 
     def _send(self, data):
@@ -81,10 +86,14 @@ class Python2Server(object):
         if line:
             return json.loads(line)
 
+    def _args(self, data):
+        session = self.codec.decoding_session()
+        return [session.decode(arg) for arg in data['args']]
+
     def _return(self, result, edepth):
         return dict(
             result='return',
-            value=self.encoder.encode(result, depth=edepth),
+            value=self.codec.encode(result, depth=edepth),
         )
 
     def _raise(self, exc_type, exc_value, exc_traceback):
@@ -92,10 +101,10 @@ class Python2Server(object):
         message = ''.join(traceback.format_exception_only(exc_type, exc_value))
         dct = dict(
             result='raise',
-            exception=self.encoder.encode(exc_value, depth=EncodingDepth.REF),
-            message=self.encoder.encode(
+            message=self.codec.encode(
                 unicode(message.rstrip('\n'), errors='replace'),
                 depth=EncodingDepth.DEEP),
+            exception=self.codec.encode(exc_value, depth=EncodingDepth.REF),
         )
 
         # TODO: More elegant way to do this?
@@ -104,126 +113,120 @@ class Python2Server(object):
 
         return dct
 
-    @_command((), edepth=EncodingDepth.DEEP)
+    @_command(edepth=EncodingDepth.DEEP)
     def _do_ping(self):
         """ No-op command used to test client-server communication. """
         pass
 
     # The following three commands all return the object passed in, but differ
     # in how the return value is encoded.
-    _do_project = _commandfunc(_reflect, ('object',), edepth=EncodingDepth.REF,
+    _do_project = _commandfunc(_reflect, edepth=EncodingDepth.REF,
                                name='project')
-    _do_lift = _commandfunc(_reflect, ('object',),
-                            edepth=EncodingDepth.SHALLOW, name='lift')
-    _do_deeplift = _commandfunc(_reflect, ('object',),
-                                edepth=EncodingDepth.DEEP, name='deeplift')
+    _do_lift = _commandfunc(_reflect, edepth=EncodingDepth.SHALLOW,
+                            name='lift')
+    _do_deeplift = _commandfunc(_reflect, edepth=EncodingDepth.DEEP,
+                                name='deeplift')
 
     # Objects returned by reference are stored in the server cache.  This
     # command is used to drop an object from the server cache.
-    @_command(('object',), edepth=EncodingDepth.DEEP)
-    def _do_del(self, object):
-        self.cache_del(id(object))
+    @_command(edepth=EncodingDepth.DEEP)
+    def _do_del(self, obj):
+        self.cache_del(id(obj))
 
-    @_command(('name',))
+    @_command()
     def _do_builtin(self, name):
         """ Lookup a builtin by name. """
         return getattr(__builtin__, name)
 
+    @_command()
+    def _do_exec(self, code, scope):
+        """ Execute code in the given scope. """
+        exec code in scope
+        return scope
+
     # String conversion
-    _do_format = _commandfunc(format, ('object', 'format_spec'),
-                              edepth=EncodingDepth.DEEP)
-    _do_repr = _commandfunc(repr, ('object',), edepth=EncodingDepth.DEEP)
-    _do_str = _commandfunc(str, ('object',), edepth=EncodingDepth.DEEP)
-    _do_unicode = _commandfunc(unicode, ('object',), edepth=EncodingDepth.DEEP)
+    _do_format = _commandfunc(format, edepth=EncodingDepth.DEEP)
+    _do_repr = _commandfunc(repr, edepth=EncodingDepth.DEEP)
+    _do_str = _commandfunc(str, edepth=EncodingDepth.DEEP)
+    _do_unicode = _commandfunc(unicode, edepth=EncodingDepth.DEEP)
 
     # Rich comparisons
     # XXX: NotImplemented?
-    _do_lt = _commandfunc(operator.lt, ('a', 'b'), edepth=EncodingDepth.DEEP)
-    _do_le = _commandfunc(operator.le, ('a', 'b'), edepth=EncodingDepth.DEEP)
-    _do_eq = _commandfunc(operator.eq, ('a', 'b'), edepth=EncodingDepth.DEEP)
-    _do_ne = _commandfunc(operator.ne, ('a', 'b'), edepth=EncodingDepth.DEEP)
-    _do_gt = _commandfunc(operator.gt, ('a', 'b'), edepth=EncodingDepth.DEEP)
-    _do_ge = _commandfunc(operator.ge, ('a', 'b'), edepth=EncodingDepth.DEEP)
+    _do_lt = _commandfunc(operator.lt, edepth=EncodingDepth.DEEP)
+    _do_le = _commandfunc(operator.le, edepth=EncodingDepth.DEEP)
+    _do_eq = _commandfunc(operator.eq, edepth=EncodingDepth.DEEP)
+    _do_ne = _commandfunc(operator.ne, edepth=EncodingDepth.DEEP)
+    _do_gt = _commandfunc(operator.gt, edepth=EncodingDepth.DEEP)
+    _do_ge = _commandfunc(operator.ge, edepth=EncodingDepth.DEEP)
 
     # Basic customization
-    _do_bool = _commandfunc(bool, ('object',), edepth=EncodingDepth.DEEP)
-    _do_hash = _commandfunc(hash, ('object',), edepth=EncodingDepth.DEEP)
+    _do_bool = _commandfunc(bool, edepth=EncodingDepth.DEEP)
+    _do_hash = _commandfunc(hash, edepth=EncodingDepth.DEEP)
 
     # Attribute access
-    _do_getattr = _commandfunc(getattr, ('object', 'name'))
-    _do_setattr = _commandfunc(setattr, ('object', 'name', 'value'),
-                               edepth=EncodingDepth.DEEP)
-    _do_delattr = _commandfunc(delattr, ('object', 'name'),
-                               edepth=EncodingDepth.DEEP)
-
-    # Instance/subclass checks
-    _do_isinstance = _commandfunc(isinstance, ('object', 'classinfo'),
-                                  edepth=EncodingDepth.DEEP)
-    _do_issubclass = _commandfunc(issubclass, ('class_', 'classinfo'),
-                                  edepth=EncodingDepth.DEEP)
+    _do_getattr = _commandfunc(getattr)
+    _do_setattr = _commandfunc(setattr, edepth=EncodingDepth.DEEP)
+    _do_delattr = _commandfunc(delattr, edepth=EncodingDepth.DEEP)
 
     # Callable objects
-    @_command(('object', 'args', 'kwargs'))
-    def _do_call(self, object, args, kwargs):
+    @_command()
+    def _do_call(self, obj, args, kwargs):
         """ Call a function or callable object. """
-        return object(*args, **kwargs)
+        return obj(*args, **kwargs)
 
     # Container types
-    _do_len = _commandfunc(len, ('object',), edepth=EncodingDepth.DEEP)
-    _do_getitem = _commandfunc(operator.getitem, ('object', 'key'))
-    _do_setitem = _commandfunc(operator.setitem, ('object', 'key', 'value'),
-                               edepth=EncodingDepth.DEEP)
-    _do_delitem = _commandfunc(operator.delitem, ('object', 'key'),
-                               edepth=EncodingDepth.DEEP)
-    _do_iter = _commandfunc(iter, ('object',))
-    _do_reversed = _commandfunc(reversed, ('object',))
-    _do_contains = _commandfunc(operator.contains, ('object', 'item'))
+    _do_len = _commandfunc(len, edepth=EncodingDepth.DEEP)
+    _do_getitem = _commandfunc(operator.getitem)
+    _do_setitem = _commandfunc(operator.setitem, edepth=EncodingDepth.DEEP)
+    _do_delitem = _commandfunc(operator.delitem, edepth=EncodingDepth.DEEP)
+    _do_iter = _commandfunc(iter)
+    _do_reversed = _commandfunc(reversed)
+    _do_contains = _commandfunc(operator.contains, edepth=EncodingDepth.DEEP)
 
     # Iterators
-    _do_next = _commandfunc(next, ('object',))
+    _do_next = _commandfunc(next)
 
     # Numeric types
-    _do_add = _commandfunc(operator.add, ('a', 'b'))
-    _do_sub = _commandfunc(operator.sub, ('a', 'b'))
-    _do_mul = _commandfunc(operator.mul, ('a', 'b'))
-    _do_div = _commandfunc(operator.div, ('a', 'b'))
-    _do_truediv = _commandfunc(operator.truediv, ('a', 'b'))
-    _do_floordiv = _commandfunc(operator.floordiv, ('a', 'b'))
-    _do_mod = _commandfunc(operator.mod, ('a', 'b'))
-    _do_divmod = _commandfunc(divmod, ('a', 'b'))
-    _do_pow = _commandfunc(pow, ('a', 'b'))
-    _do_pow3 = _commandfunc(pow, ('a', 'b', 'm'))
-    _do_lshift = _commandfunc(operator.lshift, ('a', 'b'))
-    _do_rshift = _commandfunc(operator.rshift, ('a', 'b'))
-    _do_and = _commandfunc(operator.and_, ('a', 'b'))
-    _do_xor = _commandfunc(operator.xor, ('a', 'b'))
-    _do_or = _commandfunc(operator.or_, ('a', 'b'))
+    _do_add = _commandfunc(operator.add)
+    _do_sub = _commandfunc(operator.sub)
+    _do_mul = _commandfunc(operator.mul)
+    _do_div = _commandfunc(operator.div)
+    _do_truediv = _commandfunc(operator.truediv)
+    _do_floordiv = _commandfunc(operator.floordiv)
+    _do_mod = _commandfunc(operator.mod)
+    _do_divmod = _commandfunc(divmod)
+    _do_pow = _commandfunc(pow)
+    _do_pow3 = _commandfunc(pow, name='pow3')
+    _do_lshift = _commandfunc(operator.lshift)
+    _do_rshift = _commandfunc(operator.rshift)
+    _do_and = _commandfunc(operator.and_, name='and')
+    _do_xor = _commandfunc(operator.xor)
+    _do_or = _commandfunc(operator.or_, name='or')
 
-    _do_iadd = _commandfunc(operator.iadd, ('a', 'b'))
-    _do_isub = _commandfunc(operator.isub, ('a', 'b'))
-    _do_imul = _commandfunc(operator.imul, ('a', 'b'))
-    _do_idiv = _commandfunc(operator.idiv, ('a', 'b'))
-    _do_itruediv = _commandfunc(operator.itruediv, ('a', 'b'))
-    _do_ifloordiv = _commandfunc(operator.ifloordiv, ('a', 'b'))
-    _do_imod = _commandfunc(operator.imod, ('a', 'b'))
-    _do_ipow = _commandfunc(pow, ('a', 'b'))
-    _do_ilshift = _commandfunc(operator.ilshift, ('a', 'b'))
-    _do_irshift = _commandfunc(operator.irshift, ('a', 'b'))
-    _do_iand = _commandfunc(operator.iand, ('a', 'b'))
-    _do_ixor = _commandfunc(operator.ixor, ('a', 'b'))
-    _do_ior = _commandfunc(operator.ior, ('a', 'b'))
+    _do_iadd = _commandfunc(operator.iadd)
+    _do_isub = _commandfunc(operator.isub)
+    _do_imul = _commandfunc(operator.imul)
+    _do_idiv = _commandfunc(operator.idiv)
+    _do_itruediv = _commandfunc(operator.itruediv)
+    _do_ifloordiv = _commandfunc(operator.ifloordiv)
+    _do_imod = _commandfunc(operator.imod)
+    _do_ipow = _commandfunc(operator.ipow)
+    _do_ilshift = _commandfunc(operator.ilshift)
+    _do_irshift = _commandfunc(operator.irshift)
+    _do_iand = _commandfunc(operator.iand)
+    _do_ixor = _commandfunc(operator.ixor)
+    _do_ior = _commandfunc(operator.ior)
 
-    _do_neg = _commandfunc(operator.neg, ('object'))
-    _do_pos = _commandfunc(operator.pos, ('object'))
-    _do_abs = _commandfunc(operator.abs, ('object'))
-    _do_invert = _commandfunc(operator.invert, ('object'))
+    _do_neg = _commandfunc(operator.neg)
+    _do_pos = _commandfunc(operator.pos)
+    _do_abs = _commandfunc(operator.abs)
+    _do_invert = _commandfunc(operator.invert)
 
-    _do_complex = _commandfunc(complex, ('object',), edepth=EncodingDepth.DEEP)
-    _do_int = _commandfunc(int, ('object',), edepth=EncodingDepth.DEEP)
-    _do_float = _commandfunc(float, ('object',), edepth=EncodingDepth.DEEP)
-    _do_round = _commandfunc(round, ('object', 'n'), edepth=EncodingDepth.DEEP)
-    _do_index = _commandfunc(operator.index, ('object',),
-                             edepth=EncodingDepth.DEEP)
+    _do_complex = _commandfunc(complex, edepth=EncodingDepth.DEEP)
+    _do_int = _commandfunc(int, edepth=EncodingDepth.DEEP)
+    _do_float = _commandfunc(float, edepth=EncodingDepth.DEEP)
+    _do_round = _commandfunc(round, edepth=EncodingDepth.DEEP)
+    _do_index = _commandfunc(operator.index, edepth=EncodingDepth.DEEP)
 
     def run(self):
         """
@@ -232,6 +235,8 @@ class Python2Server(object):
         """
         data = self._receive()
         while data:
+            # TODO: Handle protocol errors (e.g. invalid command)?
             cmethod = getattr(self, '_do_{}'.format(data['command']))
-            self._send(cmethod(data))
+            args = self._args(data)
+            self._send(cmethod(*args))
             data = self._receive()
