@@ -288,10 +288,11 @@ Python 3 proxy objects in Python 2
 ``````````````````````````````````
 Currently the relationship between client and server is asymmetrical.  The
 client has a representation of Python 2 objects, but the server does not have
-a way to represent Python 3 objects.  This would mean that instead of the
-request-response pattern from client to server, there would be the possibility
-of callbacks.  In effect, the two processes would act more like coroutines with
-the flow of control passing back and forth between them freely.
+a way to represent Python 3 objects.  We might like to add such a mechanism.
+This would mean that instead of the simple request-response pattern from client
+to server we have now, there would be the possibility of callbacks.  In effect,
+the two processes would act more like coroutines with the flow of control
+passing back and forth between them.
 
 Better Python version support
 `````````````````````````````
