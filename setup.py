@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='python2',
-    version='1.0',
+    version='1.1',
     author="Nicholas Gaya",
     author_email="nickgaya@users.noreply.github.com",
     description="Library for using Python 2 within Python 3",
