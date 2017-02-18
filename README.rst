@@ -101,6 +101,20 @@ can also freely mix and match with Python 3 builtin types::
     >>> d.__
     {'bar': None}
 
+If you just want to execute some Python 2 code directly, you can use the
+``Python2.exec()`` method.  This method accepts a string containing Python 2
+code and an optional dict representing the scope to execute the code in, and
+returns the resulting scope after executing the code.  This can be used to
+define new Python 2 classes and functions::
+
+   >>> scope = py2.exec("""
+   ... def foo(x):
+   ...     return x + 1
+   ... """)
+   >>> foo = scope['foo']
+   >>> foo(2)
+   <Py2Object 3>
+
 If an exception occurs in Python 2, a ``Py2Error`` will be thrown by the
 client.  The Python 2 exception is stored as the ``exception`` attribute of the
 ``Py2Error`` object.  The underlying traceback is attached to the Python 2
@@ -133,6 +147,9 @@ projected to Python 2.  The supported types are: ``bool``, ``int``, ``float``,
 ``list``, ``tuple``, ``set``, ``frozenset``, and ``dict``.  The ``None``,
 ``NotImplemented``, and ``Ellipsis`` singletons are also supported.
 
+In particular, Python 3 functions, types, and instances of user-defined classes
+cannot currently be projected into Python 2.
+
 Type introspection
 ``````````````````
 The ``Py2Object`` class implements many "magic methods" from the Python 3 data
@@ -156,16 +173,23 @@ methods::
     >>> list(iter(i))
     [<Py2Object 1>, <Py2Object 2>, <Py2Object 3>]
 
+If you need to introspect a Python 2 object, use the corresponding *Python 2*
+builtin functions.  For example::
+
+    >>> i = py2.project(1)
+    >>> py2.callable(i)
+    <Py2Object False>
+
 String types
 ````````````
-In Python 2, the ``str`` s are raw byte strings, while in Python 3 they are
+In Python 2, ``str`` objects are raw byte strings, while in Python 3 they are
 Unicode strings.  This can lead to some confusion, as projecting a Python 3
-string will result in a Python 2 ``unicode`` object, while lifting a Python 2
-string will return a Python 3 ``bytes`` object.
+``str`` will result in a Python 2 ``unicode`` object, while lifting a Python 2
+``str`` will return a Python 3 ``bytes`` object.
 
-    >>> p2.project('foo')
+    >>> py2.project('foo')
     <Py2Object u'foo'>
-    >>> p2.str(123)._
+    >>> py2.lift(py2.str(123))
     b'123'
 
 Division
@@ -178,7 +202,7 @@ method will be used to implement division rather than ``__div__``.
 
 ::
 
-    >>> i = p2.project(1)
+    >>> i = py2.project(1)
     >>> i / 2
     <Py2Object 0.5>
 
@@ -251,10 +275,11 @@ instances of these classes.
 
 The main benefit of this change would be better type introspection for Python 2
 objects (see the discussion at `Type introspection`_).  However, it would be
-more cumbersome and less efficient, since the client would need to know the
-type of each object and the methods supported by that type.  Additionally, it
-would not fully support the dynamic nature of Python types, since the proxied
-type would not reflect changes to the underlying type.
+more cumbersome and incur a performance cost, since the client would need to
+know the type of each object and the methods supported by that type.
+Additionally, this approach would not fully support the dynamic nature of the
+Python type system, since the proxied type would not reflect changes to the
+underlying type such as adding or removing methods.
 
 This would require the server to return the object type for references, and
 some mechanism for the client to introspect Python 2 types.  The client would
@@ -262,27 +287,9 @@ cache types for the lifetime of the Python 2 session, with a mechanism to
 explicitly refresh a type to pick up any changes that had occurred in Python 2.
 
 Bootstrapping the type system might be a little tricky.  We would want to
-create a type ``Py2type`` such that ``type(Py2type)`` is ``Py2type``.  We would
-also want some type that all proxy objects (types and instances) are instances
-of.
-
-We could bootstrap the system like this::
-
-    class Py2Object:
-        """ Base type for Python 2 objects. """
-        pass
-
-    class Type(type):
-        """ Type subclass to allow setting Py2type.__class__ below. """
-        pass
-
-    Py2type = Type('Py2type', (type, Py2Object), {...})
-    Py2type.__class__ = Py2type  # !
-
-Then we can then create other proxy types as follows::
-
-    Py2object = Py2type.__new__(Py2type, 'Py2object', (Py2Object,), {...})
-    
+create a type ``Py2type`` such all proxy types are instances of, *including
+``Py2type`` itself.*  We would also probably want a base type for all proxy
+objects, including types.
 
 Python 3 proxy objects in Python 2
 ``````````````````````````````````
@@ -297,3 +304,21 @@ passing back and forth between them.
 Better Python version support
 `````````````````````````````
 We could extend support to more Python 2 and 3 versions.
+
+See also
+--------
+It seems I'm not the only one to have this idea.  `Sux`_ is a library that
+provides similar functionality. However, it has some notable differences:
+
+- The library is much smaller and more lightweight, and only needs to be
+  installed in the Python 3 environment to work.
+
+- The main emphasis is on imports and function calls, which makes sense since
+  these are the most important operations for the using legacy packages.  Most
+  other operators (e.g. arithmetic operators) are not supported.
+
+- The library uses Pickle to communicate between the Python 2 and 3 processes.
+  This is a good idea and I should probably do the same, although I had fun
+  implementing the current encoding algorithm.
+
+..  _Sux: https://github.com/nicois/sux/
