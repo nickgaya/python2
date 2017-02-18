@@ -73,14 +73,14 @@ def test_comparison(py2, op, d):
     assert op(y, x_) == op(y, x)
 
 
-def test_bool(py2):
-    assert bool(py2.list()) is False
-    assert bool(py2.list((1, 2, 3))) is True
-
-
 def test_hash(py2):
     o = py2.object()
     assert hash(o) == py2.hash(o)
+
+
+def test_bool(py2):
+    assert bool(py2.list()) is False
+    assert bool(py2.list((1, 2, 3))) is True
 
 
 def test_getattr(py2, helpers):

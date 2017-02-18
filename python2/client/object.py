@@ -56,11 +56,11 @@ class Py2Object:
     def __ge__(self, other):
         return self.__client__.do_command('ge', self, other)
 
-    def __bool__(self):
-        return self.__client__.do_command('bool', self)
-
     def __hash__(self):
         return self.__client__.do_command('hash', self)
+
+    def __bool__(self):
+        return self.__client__.do_command('bool', self)
 
     def __getattr__(self, name):
         return self.__client__.do_command('getattr', self, name)
