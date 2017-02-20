@@ -136,6 +136,22 @@ context manager to automatically do the same thing when exiting the context.
 
     >>> py2.shutdown()
 
+How it works
+------------
+
+When you launch a Python 2 session, the library spawns a child process running
+Python 2.  This child process runs a *server* that listens for commands from
+the Python 3 *client*.  For each command, the server performs an operation in
+Python 2 and returns the result either as an encoded *value* made up of
+supported types, or a *reference* to a Python 2 object stored on the server.
+
+On the client side, the library wraps Python 2 references with the
+``Py2Object`` class.  This class implements many of the "magic methods" of the
+`Python 3 data model`_ by sending commands to the Python 2 server to perform
+the appropriate operation on the underlying Python 2 object.
+
+.. _Python 3 data model: https://docs.python.org/3/reference/datamodel.html
+
 Caveats
 -------
 
