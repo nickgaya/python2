@@ -185,6 +185,8 @@ Unicode strings.  This can lead to some confusion, as projecting a Python 3
 ``str`` will result in a Python 2 ``unicode`` object, while lifting a Python 2
 ``str`` will return a Python 3 ``bytes`` object.
 
+::
+
     >>> py2.project('foo')
     <Py2Object u'foo'>
     >>> py2.lift(py2.str(123))
