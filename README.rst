@@ -30,8 +30,8 @@ virtualenvs, and install the package into both.
 Testing
 -------
 This package uses Tox for testing.  Tests are not included in the Python dist,
-so you will need to clone the repo to run them.  To run the unit tests with
-Tox::
+so you will need to clone the repo to run them.  To run the unit tests, install
+Tox and run the following command from the project's base directory::
 
     tox
 
@@ -40,6 +40,20 @@ After running tox, you can run the client-server integration tests with the
 Tox virtualenvs to use for Python 2 and 3, respectively::
 
     ./integration_tests.sh py27 py36
+
+To modify the behavior of Tox, you can set the ``PYTEST_ADDOPTS`` variable.
+For example, you can set the ``-x`` flag to abort after the first test
+failure::
+
+    export PYTEST_ADDOPTS=-x
+
+You can use the ``-n NUM`` flag to parallelize the tests using the
+`pytest-xdist plugin`_  This adds some overhead to the test setup, so this
+option is primarily useful for speeding up the integration tests.
+
+    export PYTEST_ADDOPTS='-n 4'
+
+.. _pytest-xdist plugin: http://pytest.org/dev/xdist.html
 
 Usage
 -----
