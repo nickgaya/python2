@@ -1,5 +1,7 @@
 #! /bin/bash
 
+set -e
+
 if [ $# -ne 2 ]; then
     echo "Usage: $0 PY2 PY3" >&2
     exit 2
@@ -14,4 +16,6 @@ if [ ${#args[@]} -eq 0 ]; then
     args=(tests/integration/)
 fi
 
-.tox/"$py3"/bin/pytest --python2=.tox/"$py2"/bin/python "${args[@]}"
+set -x
+
+build/tox/"$py3"/bin/pytest --python2=build/tox/"$py2"/bin/python "${args[@]}"
