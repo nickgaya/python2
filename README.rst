@@ -27,34 +27,6 @@ To install the package::
 If using virtualenvs, you will need to create separate Python 2 and 3
 virtualenvs, and install the package into both.
 
-Testing
--------
-This package uses Tox for testing.  Tests are not included in the Python dist,
-so you will need to clone the repo to run them.  To run the unit tests, install
-Tox and run the following command from the project's base directory::
-
-    tox
-
-After running tox, you can run the client-server integration tests with the
-'integration_tests.sh' script.  This script takes two arguments specifying the
-Tox virtualenvs to use for Python 2 and 3, respectively::
-
-    ./integration_tests.sh py27 py36
-
-To modify the behavior of Tox, you can set the ``PYTEST_ADDOPTS`` variable.
-For example, you can set the ``-x`` flag to abort after the first test
-failure::
-
-    export PYTEST_ADDOPTS=-x
-
-You can use the ``-n NUM`` flag to parallelize the tests using the
-`pytest-xdist plugin`_  This adds some overhead to the test setup, so this
-option is primarily useful for speeding up the integration tests.
-
-    export PYTEST_ADDOPTS='-n 4'
-
-.. _pytest-xdist plugin: http://pytest.org/dev/xdist.html
-
 Usage
 -----
 To begin working with Python 2, import the package in Python 3 and create a new
@@ -150,21 +122,33 @@ context manager to automatically do the same thing when exiting the context.
 
     >>> py2.shutdown()
 
-How it works
-------------
+Testing
+-------
+This package uses Tox for testing.  Tests are not included in the Python dist,
+so you will need to clone the repo to run them.  To run the unit tests, install
+Tox and run the following command from the project's base directory::
 
-When you launch a Python 2 session, the library spawns a child process running
-Python 2.  This child process runs a *server* that listens for commands from
-the Python 3 *client*.  For each command, the server performs an operation in
-Python 2 and returns the result either as an encoded *value* made up of
-supported types, or a *reference* to a Python 2 object stored on the server.
+    tox
 
-On the client side, the library wraps Python 2 references with the
-``Py2Object`` class.  This class implements many of the "magic methods" of the
-`Python 3 data model`_ by sending commands to the Python 2 server to perform
-the appropriate operation on the underlying Python 2 object.
+After running tox, you can run the client-server integration tests with the
+'integration_tests.sh' script.  This script takes two arguments specifying the
+Tox virtualenvs to use for Python 2 and 3, respectively::
 
-.. _Python 3 data model: https://docs.python.org/3/reference/datamodel.html
+    ./integration_tests.sh py27 py36
+
+To modify the behavior of Tox, you can set the ``PYTEST_ADDOPTS`` variable.
+For example, you can set the ``-x`` flag to abort after the first test
+failure::
+
+    export PYTEST_ADDOPTS=-x
+
+You can use the ``-n NUM`` flag to parallelize the tests using the
+`pytest-xdist plugin`_  This adds some overhead to the test setup, so this
+option is primarily useful for speeding up the integration tests.
+
+    export PYTEST_ADDOPTS='-n 4'
+
+.. _pytest-xdist plugin: http://pytest.org/dev/xdist.html
 
 Caveats
 -------
@@ -248,6 +232,21 @@ is used.  When a ``Py2Object`` divides or is divided by a Python 3 value, true d
 
 Further discussion
 ------------------
+
+How it works
+````````````
+When you launch a Python 2 session, the library spawns a child process running
+Python 2.  This child process runs a *server* that listens for commands from
+the Python 3 *client*.  For each command, the server performs an operation in
+Python 2 and returns the result either as an encoded *value* made up of
+supported types, or a *reference* to a Python 2 object stored on the server.
+
+On the client side, the library wraps Python 2 references with the
+``Py2Object`` class.  This class implements many of the "magic methods" of the
+`Python 3 data model`_ by sending commands to the Python 2 server to perform
+the appropriate operation on the underlying Python 2 object.
+
+.. _Python 3 data model: https://docs.python.org/3/reference/datamodel.html
 
 Call-by-value semantics
 ```````````````````````
