@@ -47,7 +47,7 @@ To begin working with Python 2, import the package in Python 3 and create a new
 ``Python2`` object::
 
     >>> from python2.client import Python2
-    >>> py2 = Python2()
+    >>> py2 = Python2('/path/to/python2/executable')
 
 This object is our gateway to the Python 2 world.  Python 2 builtins can be
 accessed as attributes of the ``Python2`` object. Let's use Python 2's
@@ -179,6 +179,8 @@ builtin functions.  For example::
     >>> i = py2.project(1)
     >>> py2.callable(i)
     <Py2Object False>
+    >>> py2.isinstance(i, py2.int)
+    <Py2Object True>
 
 String types
 ````````````
@@ -305,10 +307,11 @@ Better Python version support
 `````````````````````````````
 We could extend support to more Python 2 and 3 versions.
 
-See also
---------
-It seems I'm not the only one to have this idea.  `Sux`_ is a library that
-provides similar functionality. However, it has some notable differences:
+Similar projects
+----------------
+After writing this library, I discovered that I'm not the only one to have had
+this idea.  `Sux`_ is a library that provides similar functionality, with some
+notable differences:
 
 - The library is much smaller and more lightweight, and only needs to be
   installed in the Python 3 environment to work.
@@ -318,7 +321,7 @@ provides similar functionality. However, it has some notable differences:
   other operators (e.g. arithmetic operators) are not supported.
 
 - The library uses Pickle to communicate between the Python 2 and 3 processes.
-  This is a good idea and I should probably do the same, although I had fun
-  implementing the current encoding algorithm.
+  This is a good idea and I should probably have done the same, although I had
+  fun implementing the current encoding algorithm.
 
-..  _Sux: https://github.com/nicois/sux/
+.. _Sux: https://github.com/nicois/sux/
