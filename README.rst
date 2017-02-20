@@ -146,8 +146,6 @@ You can use the ``-n NUM`` flag to parallelize the tests using the
 `pytest-xdist plugin`_  This adds some overhead to the test setup, so this
 option is primarily useful for speeding up the integration tests.
 
-    export PYTEST_ADDOPTS='-n 4'
-
 .. _pytest-xdist plugin: http://pytest.org/dev/xdist.html
 
 Caveats
@@ -171,8 +169,8 @@ model.  As a result, a ``Py2Object`` appears to be callable, iterable, etc.,
 even if the underlying object is not.  Attempting to perform such operations may
 result in a ``Py2Error``.
 
-If you need to introspect a Python 2 object, use the corresponding *Python 2*
-builtin functions.  For example::
+If you need to introspect a Python 2 object, use Python 2 builtin functions.
+For example::
 
     >>> i = py2.project(1)
     >>> py2.callable(i)
@@ -220,10 +218,10 @@ Further discussion
 How it works
 ````````````
 When you launch a Python 2 session, the library spawns a child process running
-Python 2.  This child process runs a *server* that listens for commands from
-the Python 3 *client*.  For each command, the server performs an operation in
-Python 2 and returns the result either as an encoded *value* made up of
-supported types, or a *reference* to a Python 2 object stored on the server.
+Python 2.  This child process acts as a server that listens for commands from
+the Python 3 client.  For each command, the server performs an operation in
+Python 2 and returns the result either as an encoded value or a reference to a
+Python 2 object stored on the server.
 
 On the client side, the library wraps Python 2 references with the
 ``Py2Object`` class.  This class implements many of the "magic methods" of the
@@ -310,9 +308,9 @@ cache types for the lifetime of the Python 2 session, with a mechanism to
 explicitly refresh a type to pick up any changes that had occurred in Python 2.
 
 Bootstrapping the type system might be a little tricky.  We would want to
-create a type ``Py2type`` such all proxy types are instances of, *including
-``Py2type`` itself.*  We would also probably want a base type for all proxy
-objects, including types.
+create a base type that all proxy types are instances of, *including the base
+type itself.*  We would also probably want a base type for all proxy objects
+including non-types.
 
 Python 3 proxy objects in Python 2
 ``````````````````````````````````
