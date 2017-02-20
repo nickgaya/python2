@@ -6,6 +6,9 @@ Changelog
 - Update division operator to use classic division when dividing two Python 2
   objects, but true division for mixed Python 2 / 3 division.
 
+- Update client to dynamically generate exception classes with special base
+  types.
+
 - Test/build script improvements
     - Enable pytest-xdist
     - Docs support

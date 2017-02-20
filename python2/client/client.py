@@ -6,9 +6,11 @@ import logging
 import weakref
 
 from python2.client.codec import ClientCodec
-from python2.client.exceptions import Py2Error, Py2StopIteration
+from python2.client.exceptions import Py2Error
 from python2.client.object import Py2Object
 
+
+SPECIAL_EXCEPTION_TYPES = {t.__name__: t for t in (StopIteration,)}
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +62,15 @@ class Py2Client:
             return self.codec.decode(data['value'])
         elif data['result'] == 'raise':
             exception_type = Py2Error
-            if data.get('exc_type') == 'StopIteration':
-                exception_type = Py2StopIteration
+            if data['types']:
+                # Dynamically generate Py2Error subclass with relevant base
+                # types.  This allows "special" Python 2 exceptions to be
+                # handled correctly by builtin methods.
+                bases = [Py2Error]
+                bases.extend(SPECIAL_EXCEPTION_TYPES[tname]
+                             for tname in data['types'])
+                exception_type = type('Py2Error~', tuple(bases), {})
+
             raise exception_type(
                 self.codec.decode(data['message']),
                 exception=self.codec.decode(data['exception'])

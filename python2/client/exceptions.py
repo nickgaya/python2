@@ -12,8 +12,3 @@ class Py2Error(Exception):
 
     def __repr__(self):
         return "<{} {!r}>".format(self.__class__.__name__, self.exception)
-
-
-# Special case so iterators work properly
-class Py2StopIteration(Py2Error, StopIteration):
-    pass

@@ -105,11 +105,9 @@ class Python2Server(object):
                 unicode(message.rstrip('\n'), errors='replace'),
                 depth=EncodingDepth.DEEP),
             exception=self.codec.encode(exc_value, depth=EncodingDepth.REF),
+            # TODO: More elegant way to do this?
+            types=[t.__name__ for t in exc_type.__mro__ if t is StopIteration]
         )
-
-        # TODO: More elegant way to do this?
-        if issubclass(exc_type, StopIteration):
-            dct.update(exc_type='StopIteration')
 
         return dct
 
