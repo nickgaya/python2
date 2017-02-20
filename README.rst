@@ -226,17 +226,25 @@ Unicode strings.  This can lead to some confusion, as projecting a Python 3
 
 Division
 ````````
-The behavior of the division operator changed with PEP 238.  Dividing
-``Py2Object`` s uses "true division" rather than "classic division".  This is
-similar to the behavior of Python 2 when ``from __future__ import division`` is
-in effect.  For user-defined classes, this means that the ``__truediv__``
-method will be used to implement division rather than ``__div__``.
+The behavior of the division operator changed with `PEP 238`_.  This created
+two alternate division operations, "true division" and "classic division".
+Classic division was removed in Python 3.
+
+To respect this change, when two ``Py2Object`` s are divided, classic division
+is used.  When a ``Py2Object`` divides or is divided by a Python 3 value, true division is used.
 
 ::
 
     >>> i = py2.project(1)
-    >>> i / 2
+    >>> j = py2.project(2)
+    >>> i / j  # classic division
+    <Py2Object 0>
+    >>> i / 2  # true division
     <Py2Object 0.5>
+    >>> 1 / j  # true division
+    <Py2Object 0.5>
+
+.. _PEP 238: https://www.python.org/dev/peps/pep-0238/
 
 Further discussion
 ------------------

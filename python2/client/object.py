@@ -108,7 +108,8 @@ class Py2Object:
         return self.__client__.do_command('mul', self, other)
 
     def __truediv__(self, other):
-        return self.__client__.do_command('truediv', self, other)
+        cmd = 'div' if isinstance(other, Py2Object) else 'truediv'
+        return self.__client__.do_command(cmd, self, other)
 
     def __floordiv__(self, other):
         return self.__client__.do_command('floordiv', self, other)
@@ -150,7 +151,8 @@ class Py2Object:
         return self.__client__.do_command('mul', other, self)
 
     def __rtruediv__(self, other):
-        return self.__client__.do_command('truediv', other, self)
+        cmd = 'div' if isinstance(other, Py2Object) else 'truediv'
+        return self.__client__.do_command(cmd, other, self)
 
     def __rfloordiv__(self, other):
         return self.__client__.do_command('floordiv', other, self)
@@ -189,7 +191,8 @@ class Py2Object:
         return self.__client__.do_command('imul', self, other)
 
     def __itruediv__(self, other):
-        return self.__client__.do_command('itruediv', self, other)
+        cmd = 'idiv' if isinstance(other, Py2Object) else 'itruediv'
+        return self.__client__.do_command(cmd, self, other)
 
     def __ifloordiv__(self, other):
         return self.__client__.do_command('ifloordiv', self, other)

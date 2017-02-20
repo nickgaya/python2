@@ -271,7 +271,6 @@ def test_contains(py2):
 @pytest.mark.parametrize('op', (operator.add,
                                 operator.sub,
                                 operator.mul,
-                                operator.truediv,
                                 operator.floordiv,
                                 operator.mod,
                                 divmod,
@@ -281,14 +280,54 @@ def test_contains(py2):
                                 operator.and_,
                                 operator.xor,
                                 operator.or_))
-def test_operators(py2, helpers, op):
+@pytest.mark.parametrize('project_y', (True, False))
+def test_operators(py2, helpers, op, project_y):
     x, y = 4, 3
     x_ = py2.project(x)
-    y_ = py2.project(y)
+    y_ = py2.project(y) if project_y else y
 
     helpers.assert_py2_eq(op(x_, y_), op(x, y))
-    helpers.assert_py2_eq(op(x_, y), op(x, y))
+
+
+@pytest.mark.parametrize('op', (operator.add,
+                                operator.sub,
+                                operator.mul,
+                                operator.floordiv,
+                                operator.mod,
+                                divmod,
+                                operator.pow,
+                                operator.lshift,
+                                operator.rshift,
+                                operator.and_,
+                                operator.xor,
+                                operator.or_))
+@pytest.mark.parametrize('project_y', (True, False))
+def test_reversed_operators(py2, helpers, op, project_y):
+    x, y = 4, 3
+    x_ = py2.project(x)
+
     helpers.assert_py2_eq(op(y, x_), op(y, x))
+
+
+def test_classic_div(py2, helpers):
+    """ Test that division of Python 2 objects uses classic division. """
+    x_ = py2.project(4)
+    y_ = py2.project(3)
+    helpers.assert_py2_eq(x_ / y_, 1)
+
+
+def test_truediv(py2, helpers):
+    """ Test dividing Python 2 by Python 3 uses true division. """
+    x, y = 4, 3
+    x_ = py2.project(4)
+    helpers.assert_py2_eq(x_ / y, x / y)
+
+
+def test_rtruediv(py2, helpers):
+    """ Test that dividing Python 3 by Python 2 uses true division. """
+    x, y = 4, 3
+    x_ = py2.project(4)
+    helpers.assert_py2_eq(y / x_, y / x)
 
 
 def test_pow3(py2, helpers):
@@ -322,8 +361,7 @@ def test_inplace_operators(py2, helpers, op, obj, other, expected,
     helpers.assert_py2_eq(obj2, expected)
 
 
-@pytest.mark.parametrize(('op'), (operator.itruediv,
-                                  operator.ifloordiv,
+@pytest.mark.parametrize(('op'), (operator.ifloordiv,
                                   operator.imod,
                                   operator.ipow,
                                   operator.ilshift,
@@ -332,37 +370,43 @@ def test_inplace_operators(py2, helpers, op, obj, other, expected,
 def test_obscure_inplace_operators(py2, op, project_other):
     """ Test inplace operators not covered by native types, above. """
 
-    scope = py2.exec(textwrap.dedent("""
+    O = py2.exec(textwrap.dedent("""
         class O(object):
-            def __idiv__(self, other):
-                self.div = other
-                return self
+            def __floordiv__(self, other):
+                self.op = 'floordiv'
 
-            def __itruediv__(self, other):
-                self.itruediv = other
-                return self
+            def __mod__(self, other):
+                self.op = 'mod'
+
+            def __pow__(self, other):
+                self.op = 'pow'
+
+            def __lshift__(self, other):
+                self.op = 'lshift'
+
+            def __rshift__(self, other):
+                self.op = 'rshift'
 
             def __ifloordiv__(self, other):
-                self.ifloordiv = other
+                self.op = 'ifloordiv'
                 return self
 
             def __imod__(self, other):
-                self.imod = other
+                self.op = 'imod'
                 return self
 
             def __ipow__(self, other):
-                self.ipow = other
+                self.op = 'ipow'
                 return self
 
             def __ilshift__(self, other):
-                self.ilshift = other
+                self.op = 'ilshift'
                 return self
 
             def __irshift__(self, other):
-                self.irshift = other
+                self.op = 'irshift'
                 return self
-    """))
-    O = scope['O']
+    """))['O']
     obj = O()
     other = "foo"
     if project_other:
@@ -370,9 +414,39 @@ def test_obscure_inplace_operators(py2, op, project_other):
 
     obj2 = op(obj, other)
 
-    assert obj2 is obj  # In-place
-    # Make sure correct method was called
-    assert getattr(obj, op.__name__) == other
+    assert obj.op == op.__name__
+    assert obj2 is obj
+
+
+@pytest.mark.parametrize('project_other', (True, False))
+def test_div_inplace(py2, project_other):
+    """ Test inplace classic/true division. """
+    O = py2.exec(textwrap.dedent("""
+        class O(object):
+            def __div__(self, other):
+                self.op = 'div'
+
+            def __idiv__(self, other):
+                self.op = 'idiv'
+                return self
+
+            def __truediv__(self, other):
+                self.op = 'truediv'
+
+            def __itruediv__(self, other):
+                self.op = 'itruediv'
+                return self
+    """))['O']
+    obj = O()
+    other = "foo"
+    if project_other:
+        other = py2.project(other)
+
+    obj2 = obj
+    obj2 /= other
+
+    assert obj.op == ('idiv' if project_other else 'itruediv')
+    assert obj2 is obj
 
 
 @pytest.mark.parametrize('value', (0, 10, 1.23, 5.1+0.6j))
