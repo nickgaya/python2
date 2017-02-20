@@ -10,7 +10,7 @@ from python2.client.exceptions import Py2Error
 from python2.client.object import Py2Object
 
 
-SPECIAL_EXCEPTION_TYPES = {t.__name__: t for t in (StopIteration,)}
+SPECIAL_EXCEPTION_TYPES = {t.__name__: t for t in (StopIteration, TypeError)}
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +64,7 @@ class Py2Client:
             exception_type = Py2Error
             if data['types']:
                 # Dynamically generate Py2Error subclass with relevant base
-                # types.  This allows "special" Python 2 exceptions to be
-                # handled correctly by builtin methods.
+                # types.  This is a hack to allow iterators to work correctly.
                 bases = [Py2Error]
                 bases.extend(SPECIAL_EXCEPTION_TYPES[tname]
                              for tname in data['types'])

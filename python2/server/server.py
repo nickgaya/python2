@@ -106,7 +106,8 @@ class Python2Server(object):
                 depth=EncodingDepth.DEEP),
             exception=self.codec.encode(exc_value, depth=EncodingDepth.REF),
             # TODO: More elegant way to do this?
-            types=[t.__name__ for t in exc_type.__mro__ if t is StopIteration]
+            types=[t.__name__ for t in exc_type.__mro__
+                   if t is StopIteration or t is TypeError]
         )
 
         return dct

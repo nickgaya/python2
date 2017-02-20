@@ -3,7 +3,7 @@ import textwrap
 
 import pytest
 
-from python2.client.object import Py2Iterator, Py2Object
+from python2.client.object import Py2Object
 
 
 # TODO: Test projected/non-projected values for all operations?
@@ -179,6 +179,12 @@ def test_len(py2, obj, expected):
     assert len(obj) == expected
 
 
+def test_len_not_implemented(py2, helpers):
+    i = py2.iter([1, 2])
+    with helpers.py2_raises(py2.TypeError):
+        len(i)
+
+
 @pytest.mark.parametrize(('obj', 'key', 'expected'), [
     ("abc", cap[1], "b"),
     ([1, 2, 3, 4, 5], cap[:2], [1, 2]),
@@ -237,7 +243,6 @@ def test_delitem(py2, obj, key, expected, project_key):
 
 def test_iter_next(py2, helpers):
     i = iter(py2.project('woo'))
-    assert isinstance(i, Py2Iterator)
     helpers.assert_py2_eq(next(i), 'w')
     helpers.assert_py2_eq(next(i), 'o')
     helpers.assert_py2_eq(next(i), 'o')
@@ -249,17 +254,33 @@ def test_iter_next(py2, helpers):
 
 
 def test_iter_implicit(py2, helpers):
-    o = py2.project(['a', None, ()])
-    l = list(o)
+    i = py2.iter(['a', None, ()])
+    l = list(i)
     helpers.assert_types_match([Py2Object, Py2Object, Py2Object], l)
     assert l == ['a', None, ()]
+
+
+def test_iter_persistence(py2, helpers):
+    """ Verify that exhausted iterator continues to return StopIteration. """
+    i = py2.iter([1])
+    l1 = list(i)
+    l2 = list(i)
+    assert l1 == [1]
+    assert l2 == []
+
+
+def test_iter_assign(py2, helpers):
+    x, y = py2.iter([1, 2])
+
+    helpers.assert_py2_eq(x, 1)
+    helpers.assert_py2_eq(y, 2)
 
 
 def test_reversed(py2):
     t = py2.project((3, 4, 5))
     r = reversed(t)
     assert py2.isinstance(r, py2.reversed)
-    assert list(iter(r)) == [5, 4, 3]
+    assert list(r) == [5, 4, 3]
 
 
 def test_contains(py2):

@@ -171,22 +171,6 @@ model.  As a result, a ``Py2Object`` appears to be callable, iterable, etc.,
 even if the underlying object is not.  Attempting to perform such operations may
 result in a ``Py2Error``.
 
-One unfortunate result of this is that when creating data structures from
-Python 2 iterators, Python may try to call the ``__len__`` method of the
-object, causing the operation to fail.  To avoid this, call ``iter()`` on the
-``Py2Object`` before passing it to the builtin function.  This will wrap the
-object in a ``Py2Iterator`` class that only exposes the iterator magic
-methods::
-
-    >>> i = py2.iter([1, 2, 3])
-    >>> list(i)
-    Traceback (most recent call last):
-      File "<stdin>", line 1, in <module>
-      ...
-    python2.client.exceptions.Py2Error: TypeError: object of type 'listiterator' has no len()
-    >>> list(iter(i))
-    [<Py2Object 1>, <Py2Object 2>, <Py2Object 3>]
-
 If you need to introspect a Python 2 object, use the corresponding *Python 2*
 builtin functions.  For example::
 

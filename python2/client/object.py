@@ -87,7 +87,7 @@ class Py2Object:
         return self.__client__.do_command('delitem', self, key)
 
     def __iter__(self):
-        return Py2Iterator(self.__client__.do_command('iter', self))
+        return self.__client__.do_command('iter', self)
 
     def __reversed__(self):
         return self.__client__.do_command('reversed', self)
@@ -240,15 +240,3 @@ class Py2Object:
         except Exception:
             logger.debug("Delete failed", exc_info=True)
             pass  # Session may have already ended
-
-
-class Py2Iterator:
-    """ Wrapper around a Py2Object that only exposes iterator methods. """
-    def __init__(self, obj):
-        self.object = obj
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        return next(self.object)
